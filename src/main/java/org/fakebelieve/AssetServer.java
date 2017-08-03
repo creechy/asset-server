@@ -24,6 +24,16 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Simple HTTP server to provide download access to assets
+ * <p>
+ * This is a simple embedded Jetty HTTP server that provides the ability to specify files
+ * to make available for download. When started, the server will provide a listing of
+ * all the registered files with the ability to click on and download each file.
+ * <p>
+ * Options include the ability to specify a port number and/or simple authentication.
+ */
+
 public class AssetServer extends AbstractHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(AssetServer.class);
@@ -147,23 +157,16 @@ public class AssetServer extends AbstractHandler {
         Server server = new Server(port);
 
         if (username != null) {
-            // Since this example is for our test webapp, we need to setup a
-            // LoginService so this shows how to create a very simple hashmap based
-            // one. The name of the LoginService needs to correspond to what is
-            // configured a webapp's web.xml and since it has a lifecycle of its own
+            String[] roles = new String[]{"user"};
+            // we need to setup a LoginService. This is a very simple custom
+            // single user LoginService. And since it has a lifecycle of its own
             // we register it as a bean with the Jetty server object so it can be
             // started and stopped according to the lifecycle of the server itself.
-            // In this example the name can be whatever you like since we are not
-            // dealing with webapp realms.
-            LoginService loginService = new HardcodedLoginService(username, password);
+            LoginService loginService = new HardcodedLoginService(username, password, roles, "Asset Server");
             server.addBean(loginService);
 
-            // A security handler is a jetty handler that secures content behind a
-            // particular portion of a url space. The ConstraintSecurityHandler is a
-            // more specialized handler that allows matching of urls to different
-            // constraints. The server sets this as the first handler in the chain,
-            // effectively applying these constraints to all subsequent handlers in
-            // the chain.
+            // Create a security handler is a jetty handler to secure content behind a
+            // particular portion of a url space.
             ConstraintSecurityHandler security = new ConstraintSecurityHandler();
             server.setHandler(security);
 
@@ -173,21 +176,14 @@ public class AssetServer extends AbstractHandler {
             Constraint constraint = new Constraint();
             constraint.setName("auth");
             constraint.setAuthenticate(true);
-            constraint.setRoles(new String[]{"user"});
+            constraint.setRoles(roles);
 
-            // Binds a url pattern with the previously created constraint. The roles
-            // for this constraing mapping are mined from the Constraint itself
-            // although methods exist to declare and bind roles separately as well.
+            // Bind a url pattern with the previously created constraint.
             ConstraintMapping mapping = new ConstraintMapping();
             mapping.setPathSpec("/*");
             mapping.setConstraint(constraint);
 
-            // First you see the constraint mapping being applied to the handler as
-            // a singleton list, however you can passing in as many security
-            // constraint mappings as you like so long as they follow the mapping
-            // requirements of the servlet api. Next we set a BasicAuthenticator
-            // instance which is the object that actually checks the credentials
-            // followed by the LoginService which is the store of known users, etc.
+            // Register the entire authentication context.
             security.setConstraintMappings(Collections.singletonList(mapping));
             security.setAuthenticator(new BasicAuthenticator());
             security.setLoginService(loginService);

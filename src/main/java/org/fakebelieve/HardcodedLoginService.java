@@ -1,10 +1,10 @@
 package org.fakebelieve;
 
-
 import org.eclipse.jetty.security.DefaultIdentityService;
 import org.eclipse.jetty.security.IdentityService;
 import org.eclipse.jetty.security.LoginService;
 import org.eclipse.jetty.server.UserIdentity;
+import org.eclipse.jetty.util.security.Credential;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,19 +14,27 @@ import java.security.Principal;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Simple LoginService that manages a single user.
+ * <p>
+ * This is a simple memory based LoginService that manages a single user.
+ */
 public class HardcodedLoginService implements LoginService {
     private final static Logger log = LoggerFactory.getLogger(HardcodedLoginService.class);
 
     private final Map users = new ConcurrentHashMap();
 
     // matches what is in the constraint object in the spring config
-    private final String[] ACCESS_ROLE = new String[]{"user"};
+    private final String[] accessRoles;
     private final String username;
     private final String password;
+    private final String name;
 
-    public HardcodedLoginService(String username, String password) {
+    public HardcodedLoginService(String username, String password, String[] roles, String name) {
         this.username = username;
         this.password = password;
+        this.accessRoles = roles;
+        this.name = name;
     }
 
     private IdentityService identityService = new DefaultIdentityService();
@@ -38,23 +46,19 @@ public class HardcodedLoginService implements LoginService {
 
     @Override
     public String getName() {
-        return "";
+        return name;
     }
 
     @Override
     public UserIdentity login(final String username, Object creds, ServletRequest servletRequest) {
 
-
         UserIdentity user = null;
 
-
-        // HERE IS THE HARDCODING
         boolean validUser = this.username.equals(username) && this.password.equals(creds);
         if (validUser) {
-//            Credential credential = (creds instanceof Credential) ? (Credential) creds : Credential.getCredential(creds.toString());
+            Credential credential = (creds instanceof Credential) ? (Credential) creds : Credential.getCredential(creds.toString());
 
             Principal userPrincipal = new Principal() {
-
                 @Override
                 public String getName() {
                     return username;
@@ -62,9 +66,9 @@ public class HardcodedLoginService implements LoginService {
             };
             Subject subject = new Subject();
             subject.getPrincipals().add(userPrincipal);
-            subject.getPrivateCredentials().add(creds);
+            subject.getPrivateCredentials().add(credential);
             subject.setReadOnly();
-            user = identityService.newUserIdentity(subject, userPrincipal, ACCESS_ROLE);
+            user = identityService.newUserIdentity(subject, userPrincipal, accessRoles);
             users.put(user.getUserPrincipal().getName(), true);
 
             log.info("Logging in \"{}\"", username);
