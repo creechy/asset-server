@@ -19,10 +19,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 /**
  * Simple HTTP server to provide download access to assets
@@ -129,6 +126,7 @@ public class AssetServer extends AbstractHandler {
 
         int port = 8080;
         List<String> files = new ArrayList<>();
+        String creds = null;
         String username = null;
         String password = null;
 
@@ -139,17 +137,37 @@ public class AssetServer extends AbstractHandler {
             }
 
             if (args[idx].equals("--creds")) {
-                username = args[++idx];
-                password = args[++idx];
+                creds = args[++idx];
                 continue;
             }
 
             if (args[idx].equals("--help")) {
-                System.out.println("args: [--port <port-number>] [--creds <username> <password>] [file1 .. fileN]");
+                System.out.println("args: [--port <port-number>] [--creds <username>|<filename>] [file1 .. fileN]");
                 return;
             }
 
             files.add(args[idx]);
+        }
+
+        if (creds != null) {
+            File credsFile = new File(creds);
+            if (credsFile.exists()) {
+                Properties properties = new Properties();
+                BufferedReader credsReader = new BufferedReader(new FileReader(credsFile));
+                properties.load(credsReader);
+                credsReader.close();
+                username = properties.getProperty("username");
+                password = properties.getProperty("password");
+            } else {
+                username = creds;
+                Console console = System.console();
+                if (console == null) {
+                    logger.error("Couldn't get a console.");
+                    return;
+                }
+                char[] chars = console.readPassword("Password: ");
+                password = new String(chars);
+            }
         }
 
         AssetServer assetServer = new AssetServer(files);

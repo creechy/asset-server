@@ -8,5 +8,24 @@ Currently only plain HTTP is supported, but you can optionally configure simple 
 
 ### Usage ###
 
-`java -jar asset-server.jar [--port <port-number>] [--creds <user> <password>] <file(s)>`
+`java -jar asset-server.jar [--port <port-number>] [--creds <username>|<filename>] <file(s)>`
+
+#### Options ####
+
+`--port <port-number>`
+
+Set the port number (default: 8080)
+
+`--creds <username>`
+ `--creds <filename>`
+
+Set a username and password to authenticate with. If the argument given is an existing file, then the username & password will be read from that file, in the following format
+
+```
+username:<username>
+password:<password>
+```
+ 
+If the argument is not a file, then it will be used as the username, and the password will be prompted for on start up. 
+ 
 
